@@ -80,7 +80,7 @@ def analyze_damage_log(lines):
                 continue
             armor = j.get("armor")
             damage = j.get("damage")
-            if damage is not isinstance(damage, int):
+            if damage is not isinstance(damage, int):#理论上来讲应该用type,但不知道为什么一直被提示用isinstance，最后先用提示
                 continue
         else:#处理器
             pass
