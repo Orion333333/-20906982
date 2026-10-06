@@ -62,7 +62,19 @@ def status_report(name, robot_type, hp, max_hp, battery):
 def analyze_damage_log(lines):
     """TODO(Q2)：解析混合格式伤害日志，返回固定契约的统计 dict；
     行格式、去重与统计口径见题面 Q2 规范。"""
-    raise NotImplementedError("Q2 analyze_damage_log：题面 Q2·多源日志解析与统计")
+    figures = {"total": 0, "by_armor":{"front": 0, "left": 0, "right": 0}, "most_hit": None, "avg": 0.0}
+    for line in lines:
+        if not isinstance(line, str):
+            continue
+        s = line.strip()
+        if not s:
+            continue
+        if s.startswith("#"):
+            continue
+        if s.startswith("{"):#json
+            pass
+        else:#处理器
+            pass
 
 
 # ---------------------------------------------------------------------------
