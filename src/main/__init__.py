@@ -72,7 +72,16 @@ def analyze_damage_log(lines):
         if s.startswith("#"):
             continue
         if s.startswith("{"):#json
-            pass
+            try:
+                j = json.loads(s)
+            except json.valueError:
+                continue
+            if not isinstance(j, dict):
+                continue
+            armor = j.get("armor")
+            damage = j.get("damage")
+            if damage is not isinstance(damage, int):
+                continue
         else:#处理器
             pass
 
