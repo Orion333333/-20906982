@@ -56,7 +56,6 @@ def status_report(name, robot_type, hp, max_hp, battery):
     return report
 
 
-
 # ---------------------------------------------------------------------------
 # Q2 战斗日志分析（题面 Q2·多源日志解析与统计）
 # ---------------------------------------------------------------------------
@@ -194,29 +193,32 @@ class SentryGrid:
     @current_pos.setter
     def current_pos(self, value):
         """TODO(Q3)：位置 setter；三重输入校验见题面 Q3 规范第 1 条。"""
-        # 校验一：仅接受 tuple / list，其他类型抛 TypeError
-        # 校验二：长度必须为 2，否则抛 TypeError
-        # 校验三：元素规范化（转 int）后以 tuple 存回 self._pos
-        pass
+        if not isinstance(value, (tuple, list)) or len(value) != 2:
+            raise TypeError("current_pos needs a tuple/list of length 2")
+        self._pos = self._clamp_cell(value)
 
     def move_forward(self):
         """TODO(Q3)：朝当前 facing 前进一格，返回执行后的位置；
         碰撞、耗电与断电语义见题面 Q3 规范。"""
-        # 目标格 = 当前位置 + facing 的单位位移
-        # 断电分支：fuel <= 0 时前进不产生位移
-        # 碰撞分支：目标格被阻挡 -> 碰撞计数 +1，位置与朝向不变
-        # 通行分支：移动到目标格，并消耗 1 单位电量
-        # 最后返回执行后的 self._pos
-        pass
+        if self._fuel <= 0:
+            return self._pos
+        dx, dy = self._facing.delta
+        target = (self._pos[0] + dx, self._pos[1] + dy)
+        if self.is_blocked(target[0], target[1]):
+            self._collision_count += 1
+            return self._pos
+        self._pos = target
+        self._fuel -= 1
+        return self._pos
 
     def turn_left(self):
         """TODO(Q3)：原地左转 90°，返回新的 Facing（不耗电）。"""
-        # 旋转映射：UP -> LEFT -> DOWN -> RIGHT -> UP
+        # rotation map: UP -> LEFT -> DOWN -> RIGHT -> UP
         pass
 
     def turn_right(self):
         """TODO(Q3)：原地右转 90°，返回新的 Facing（不耗电）。"""
-        # 旋转映射：UP -> RIGHT -> DOWN -> LEFT -> UP
+        # rotation map: UP -> RIGHT -> DOWN -> LEFT -> UP
         pass
 
 
