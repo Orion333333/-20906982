@@ -1,3 +1,4 @@
+# aim-py-cw-known
 # -*- coding: utf-8 -*-
 """AIM 2627 Python Coursework —— 哨兵 Sentry 控制模块（学生骨架）。
 
@@ -62,8 +63,13 @@ def status_report(name, robot_type, hp, max_hp, battery):
 def analyze_damage_log(lines):
     """TODO(Q2)：解析混合格式伤害日志，返回固定契约的统计 dict；
     行格式、去重与统计口径见题面 Q2 规范。"""
+    import json
+    
     figures = {"total": 0, "by_armor":{"front": 0, "left": 0, "right": 0}, "most_hit": None, "avg": 0.0}
-    for line in lines:
+    
+    
+    
+    for line in lines:#先遍历，导流向传感器与json
         if not isinstance(line, str):
             continue
         s = line.strip()
@@ -72,18 +78,33 @@ def analyze_damage_log(lines):
         if s.startswith("#"):
             continue
         if s.startswith("{"):#json
-            try:
-                j = json.loads(s)
-            except json.valueError:
-                continue
-            if not isinstance(j, dict):
-                continue
-            armor = j.get("armor")
-            damage = j.get("damage")
-            if damage is not (damage, int):#理论上来讲应该用type,但不知道为什么一直被提示用isinstance，最后先用提示
-                continue
-        else:#处理器
-            pass
+            def analyze_json(s):
+                try:
+                    j = json.loads(s)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(j, dict):
+                    continue
+                armor = j.get("armor")
+                damage = j.get("damage")
+                if damage is not type(damage, int):#理论上来讲应该用type,但不知道为什么一直被提示用isinstance，最后先用提示
+                    continue#这里得再看一下，type和isinstance的区别，不知道为什么有不被可以TAP的AI要求修改了
+                return f"{armor} {damage}"
+        
+        
+        else:#传感器
+            def analyze_sensor(s):
+                pending = s.split()
+                for seg in s.split(","):
+                    k, sep, v = seg.partition(":")
+                    if sep != ":":
+                        continue
+                    k = k.strip()
+
+
+
+
+            
 
 
 # ---------------------------------------------------------------------------
@@ -173,20 +194,30 @@ class SentryGrid:
     @current_pos.setter
     def current_pos(self, value):
         """TODO(Q3)：位置 setter；三重输入校验见题面 Q3 规范第 1 条。"""
-        raise NotImplementedError("Q3 current_pos.setter：题面 Q3·位置校验三步")
+        # 校验一：仅接受 tuple / list，其他类型抛 TypeError
+        # 校验二：长度必须为 2，否则抛 TypeError
+        # 校验三：元素规范化（转 int）后以 tuple 存回 self._pos
+        pass
 
     def move_forward(self):
         """TODO(Q3)：朝当前 facing 前进一格，返回执行后的位置；
         碰撞、耗电与断电语义见题面 Q3 规范。"""
-        raise NotImplementedError("Q3 move_forward：题面 Q3·前进、碰撞与断电")
+        # 目标格 = 当前位置 + facing 的单位位移
+        # 断电分支：fuel <= 0 时前进不产生位移
+        # 碰撞分支：目标格被阻挡 -> 碰撞计数 +1，位置与朝向不变
+        # 通行分支：移动到目标格，并消耗 1 单位电量
+        # 最后返回执行后的 self._pos
+        pass
 
     def turn_left(self):
         """TODO(Q3)：原地左转 90°，返回新的 Facing（不耗电）。"""
-        raise NotImplementedError("Q3 turn_left")
+        # 旋转映射：UP -> LEFT -> DOWN -> RIGHT -> UP
+        pass
 
     def turn_right(self):
         """TODO(Q3)：原地右转 90°，返回新的 Facing（不耗电）。"""
-        raise NotImplementedError("Q3 turn_right")
+        # 旋转映射：UP -> RIGHT -> DOWN -> LEFT -> UP
+        pass
 
 
 # ---------------------------------------------------------------------------
