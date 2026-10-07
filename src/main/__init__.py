@@ -1,4 +1,3 @@
-# aim-py-cw-known
 # -*- coding: utf-8 -*-
 """AIM 2627 Python Coursework —— 哨兵 Sentry 控制模块（学生骨架）。
 
@@ -54,6 +53,7 @@ def status_report(name, robot_type, hp, max_hp, battery):
         status = "LOW"
     report = f"{name:<10}|{robot_type:^10}|HP {hp_percent:>3}%|BAT {battery:>3}%|{status}"
     return report
+
 
 
 # ---------------------------------------------------------------------------
@@ -193,33 +193,20 @@ class SentryGrid:
     @current_pos.setter
     def current_pos(self, value):
         """TODO(Q3)：位置 setter；三重输入校验见题面 Q3 规范第 1 条。"""
-        if not isinstance(value, (tuple, list)) or len(value) != 2:
-            raise TypeError("current_pos needs a tuple/list of length 2")
-        self._pos = self._clamp_cell(value)
+        raise NotImplementedError("Q3 current_pos.setter：题面 Q3·位置校验三步")
 
     def move_forward(self):
         """TODO(Q3)：朝当前 facing 前进一格，返回执行后的位置；
         碰撞、耗电与断电语义见题面 Q3 规范。"""
-        if self._fuel <= 0:
-            return self._pos
-        dx, dy = self._facing.delta
-        target = (self._pos[0] + dx, self._pos[1] + dy)
-        if self.is_blocked(target[0], target[1]):
-            self._collision_count += 1
-            return self._pos
-        self._pos = target
-        self._fuel -= 1
-        return self._pos
+        raise NotImplementedError("Q3 move_forward：题面 Q3·前进、碰撞与断电")
 
     def turn_left(self):
         """TODO(Q3)：原地左转 90°，返回新的 Facing（不耗电）。"""
-        # rotation map: UP -> LEFT -> DOWN -> RIGHT -> UP
-        pass
+        raise NotImplementedError("Q3 turn_left")
 
     def turn_right(self):
         """TODO(Q3)：原地右转 90°，返回新的 Facing（不耗电）。"""
-        # rotation map: UP -> RIGHT -> DOWN -> LEFT -> UP
-        pass
+        raise NotImplementedError("Q3 turn_right")
 
 
 # ---------------------------------------------------------------------------
