@@ -103,7 +103,12 @@ def analyze_damage_log(lines):
                 v = v.strip()
                 if not v.isdigit():
                     continue
-                v = int(v)
+                n = int(v)
+                for armor in pending.append((float,n)):
+                    total += n
+                    figures["by_armor"][armor] += n
+                    count += 1
+
                 
 
 
