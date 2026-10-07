@@ -1,3 +1,4 @@
+# aim-py-cw-known
 # -*- coding: utf-8 -*-
 """AIM 2627 Python Coursework —— 哨兵 Sentry 控制模块（学生骨架）。
 
@@ -66,7 +67,7 @@ def analyze_damage_log(lines):
     
     figures = {"total": 0, "by_armor":{"front": 0, "left": 0, "right": 0}, "most_hit": None, "avg": 0.0}
     
-    
+    #不要轻易相信AI的解答
     
     for line in lines:#先遍历，导流向传感器与json
         if not isinstance(line, str):
@@ -77,28 +78,33 @@ def analyze_damage_log(lines):
         if s.startswith("#"):
             continue
         if s.startswith("{"):#json
-            def analyze_json(s):
-                try:
-                    j = json.loads(s)
-                except json.JSONDecodeError:
+        
+            try:
+                j = json.loads(s)
+            except json.JSONDecodeError:
                     continue
-                if not isinstance(j, dict):
+            if not isinstance(j, dict):
                     continue
-                armor = j.get("armor")
-                damage = j.get("damage")
-                if damage is not type(damage, int):#理论上来讲应该用type,但不知道为什么一直被提示用isinstance，最后先用提示
+            armor = j.get("armor")
+            damage = j.get("damage")
+            if damage is not type(damage, int):#理论上来讲应该用type,但不知道为什么一直被提示用isinstance，最后先用提示
                     continue#这里得再看一下，type和isinstance的区别，不知道为什么有不被可以TAP的AI要求修改了
-                return f"{armor} {damage}"
+            
         
         
         else:#传感器
-            def analyze_sensor(s):
-                pending = s.split()
-                for seg in s.split(","):
-                    k, sep, v = seg.partition(":")
-                    if sep != ":":
+            
+            pending = s.split()
+            for seg in s.split(","):
+                k, sep, v = seg.partition(":")
+                if sep != ":":
                         continue
-                    k = k.strip()
+                k = k.strip()
+                v = v.strip()
+                if not v.isdigit():
+                    continue
+                v = int(v)
+                
 
 
 
@@ -192,21 +198,41 @@ class SentryGrid:
 
     @current_pos.setter
     def current_pos(self, value):
-        """TODO(Q3)：位置 setter；三重输入校验见题面 Q3 规范第 1 条。"""
-        raise NotImplementedError("Q3 current_pos.setter：题面 Q3·位置校验三步")
+        """Set the current position; a length-2 tuple/list, stored as a tuple."""
+        if not isinstance(value, (tuple, list)) or len(value) != 2:
+            raise TypeError("current_pos needs a tuple/list of length 2")
+        self._pos = self._clamp_cell(value)
 
     def move_forward(self):
-        """TODO(Q3)：朝当前 facing 前进一格，返回执行后的位置；
-        碰撞、耗电与断电语义见题面 Q3 规范。"""
-        raise NotImplementedError("Q3 move_forward：题面 Q3·前进、碰撞与断电")
+        """Move one cell along the facing and return the resulting position.
+
+        A blocked cell counts as a collision (no move, no turn); a passable
+        move consumes one fuel unit; with fuel <= 0 nothing happens.
+        """
+        if self._fuel <= 0:
+            return self._pos
+        dx, dy = self._facing.delta
+        target = (self._pos[0] + dx, self._pos[1] + dy)
+        if self.is_blocked(target[0], target[1]):
+            self._collision_count += 1
+            return self._pos
+        self._pos = target
+        self._fuel -= 1
+        return self._pos
 
     def turn_left(self):
-        """TODO(Q3)：原地左转 90°，返回新的 Facing（不耗电）。"""
-        raise NotImplementedError("Q3 turn_left")
+        """Turn 90 degrees left in place; return the new facing (no fuel)."""
+        left_turn = {Facing.UP: Facing.LEFT, Facing.LEFT: Facing.DOWN,
+                     Facing.DOWN: Facing.RIGHT, Facing.RIGHT: Facing.UP}
+        self._facing = left_turn[self._facing]
+        return self._facing
 
     def turn_right(self):
-        """TODO(Q3)：原地右转 90°，返回新的 Facing（不耗电）。"""
-        raise NotImplementedError("Q3 turn_right")
+        """Turn 90 degrees right in place; return the new facing (no fuel)."""
+        right_turn = {Facing.UP: Facing.RIGHT, Facing.RIGHT: Facing.DOWN,
+                      Facing.DOWN: Facing.LEFT, Facing.LEFT: Facing.UP}
+        self._facing = right_turn[self._facing]
+        return self._facing
 
 
 # ---------------------------------------------------------------------------
