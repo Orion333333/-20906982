@@ -65,20 +65,20 @@ def analyze_damage_log(lines):
     Line formats, id deduplication and averaging rules follow the
     coursework spec (Q2).
     """
-    armor_of = {"F": "front", "L": "left", "R": "right"}
+    armor_of = {"F": "front", "L": "left", "R": "right"}  # 初始化
     figures = {"total": 0,
                "by_armor": {"front": 0, "left": 0, "right": 0},
                "most_hit": None,
                "avg": 0.0}
     seen_ids = set()
     hits = 0
-    for line in lines:
+    for line in lines:  # 遍历数据并分流json和传感器
         if not isinstance(line, str):
             continue
         s = line.strip()
         if not s or s.startswith("#"):
             continue
-        if s.startswith("{"):
+        if s.startswith("{"):  # json部分，脏行抛弃并收集数据
             try:
                 record = json.loads(s)
             except json.JSONDecodeError:
@@ -107,7 +107,7 @@ def analyze_damage_log(lines):
             figures["total"] += damage
             hits += 1
         else:
-            for segment in s.split(","):
+            for segment in s.split(","): #传感器部分，脏行抛弃并收集数据
                 key, sep, value = segment.partition(":")
                 if sep != ":":
                     continue
@@ -124,7 +124,7 @@ def analyze_damage_log(lines):
                 figures["total"] += damage
                 hits += 1
     if hits:
-        figures["avg"] = round(figures["total"] / hits, 2)
+        figures["avg"] = round(figures["total"] / hits, 2) #数据的汇总
         # ties keep the earliest in fixed order: front, left, right
         most_hit = "front"
         for side in ("left", "right"):
