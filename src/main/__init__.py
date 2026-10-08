@@ -315,35 +315,66 @@ class SentryState(Enum):
 
 
 def decide(sensor, state, hp, heat):
-    """TODO(Q5)：纯函数决策，返回 (action: str, new_state: SentryState)；
-    sensor 字段契约、R1-R7 规则表与非法输入处理见题面 Q5 规范。"""
-    # contract checks first (raise ValueError):
-    #   missing any of enemy_frames / enemy_dist / robot_type / max_hp
-    #   enemy_frames empty or longer than 6
-    #   state not one of the five SentryState members
-    # normalize defensively (bad values do NOT raise):
-    #   visible = last frame truthy; dist = int enemy_dist or None
-    #   robot = "INFANTRY" / "HERO" only; hp_pct = 0-100 int
-    # rule table, first match wins (R1..R7):
-    #   R1: hp_pct <= 30             -> ("RETREAT", RETREAT)
-    #   R2: RETREAT state            -> safe hp: ("RETURN", RETURN)
-    #                                   else ("RETREAT", RETREAT)
-    #   R3: RETURN state             -> ("MOVE_BASE", PATROL)
-    #   R4: ENGAGE + visible         -> dist <= 3: ("SHOOT", ENGAGE)
-    #                                   far: HERO MOVE_RIGHT / INF MOVE_LEFT
-    #   R5: ENGAGE + not visible     -> short loss: ("HOLD_FIRE", ENGAGE)
-    #                                   long loss: ("SCAN", SUSPECT)
-    #   R6: PATROL/SUSPECT + visible -> last two frames true ?
-    #            yes: shoot / far move exactly like R4
-    #            no:  ("SCAN", SUSPECT)
-    #   R7: PATROL/SUSPECT + no sight-> ("PATROL_MOVE", PATROL) / ("SCAN",
-    #                                   SUSPECT)
-    # open points (spec does not pin exact values; hidden tests may judge):
-    #   - R2 "safe hp" exit threshold (assume hp_pct > 30)
-    #   - R5 short vs long loss (assume 1 lost frame vs 2 or more)
-    #   - defensive normalization of out-of-contract values
-    #   - heat: not referenced by R1-R7 (keep the parameter unused)
-    pass
+    """Decide one action from the R1-R7 rule table (first match wins).
+
+    Returns (action, new_state); raises ValueError when the input
+    contract is broken (missing fields, bad frame history, bad state).
+    """
+    if not isinstance(sensor, dict):
+        raise ValueError("sensor must be a dict")
+    for field in ("enemy_frames", "enemy_dist", "robot_type", "max_hp"):
+        if field not in sensor:
+            raise ValueError("sensor missing field: %s" % field)
+    frames = sensor["enemy_frames"]
+    if not isinstance(frames, (tuple, list)) or not 1 <= len(frames) <= 6:
+        raise ValueError("enemy_frames must hold 1-6 frames")
+    if not isinstance(state, SentryState):
+        raise ValueError("state must be a SentryState member")
+
+    # defensive normalization: bad values degrade, they never raise
+    visible = bool(frames[-1])
+    dist = sensor["enemy_dist"]
+    if not isinstance(dist, int) or isinstance(dist, bool):
+        dist = None
+    robot = sensor["robot_type"]
+    if robot not in ("INFANTRY", "HERO"):
+        robot = "INFANTRY"
+    try:
+        hp_pct = hp_ratio(hp, sensor["max_hp"])
+    except (TypeError, ValueError):
+        hp_pct = 0
+    # sustained loss: the previous frame was also false (R5)
+    recent_loss = len(frames) >= 2 and not bool(frames[-2])
+
+    if hp_pct <= 30:              # R1: survival first, overrides all
+        return ("RETREAT", SentryState.RETREAT)
+    if state is SentryState.RETREAT:  # R2: hold; exit at the recovery line
+        if hp_pct >= 50:              # (recovery line assumption: 50)
+            return ("RETURN", SentryState.RETURN)
+        return ("RETREAT", SentryState.RETREAT)
+    if state is SentryState.RETURN:   # R3: one-frame transit to base
+        return ("MOVE_BASE", SentryState.PATROL)
+    if state is SentryState.ENGAGE:   # R4/R5: engaged behavior
+        if visible:
+            if dist is not None and dist <= 3:
+                return ("SHOOT", SentryState.ENGAGE)
+            if robot == "HERO":
+                return ("MOVE_RIGHT", SentryState.ENGAGE)
+            return ("MOVE_LEFT", SentryState.ENGAGE)
+        if recent_loss:
+            return ("SCAN", SentryState.SUSPECT)
+        return ("HOLD_FIRE", SentryState.ENGAGE)
+    if visible:                   # R6: confirm on two frames
+        if len(frames) >= 2 and bool(frames[-2]):
+            if dist is not None and dist <= 3:
+                return ("SHOOT", SentryState.ENGAGE)
+            if robot == "HERO":
+                return ("MOVE_RIGHT", SentryState.ENGAGE)
+            return ("MOVE_LEFT", SentryState.ENGAGE)
+        return ("SCAN", SentryState.SUSPECT)
+    if state is SentryState.PATROL:   # R7: default behavior
+        return ("PATROL_MOVE", SentryState.PATROL)
+    return ("SCAN", SentryState.SUSPECT)
 
 
 # ---------------------------------------------------------------------------
