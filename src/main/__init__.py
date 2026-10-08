@@ -384,35 +384,105 @@ def decide(sensor, state, hp, heat):
 # Q6 巡逻任务（题面 Q6·巡逻契约与验收阈值）
 # ---------------------------------------------------------------------------
 def run_patrol(grid, max_steps=500):
-    """TODO(Q6)：sense → decide → act 主循环；
-    循环结构、终止条件、脱困自由度与统计返回契约见题面 Q6 规范。"""
-    # loop while steps < max_steps, grid.fuel > 0 and not grid.found_enemy
-    #   sense: read grid state (pos / facing / fuel / visited trail)
-    #   decide: Q4 greedy via next_step_toward; when greedy stalls
-    #     (no candidate), switch into a custom escape mode
-    #   act: turn the facing toward the chosen direction, then
-    #     move_forward; count the action into steps
-    # stats to track: steps, grid.collision_count, distinct visited
-    #   cells, found_enemy
-    # return {"steps": int, "collisions": int, "visited_count": int,
-    #         "found_enemy": bool, "success": bool}
-    # acceptance thresholds (200 seeds): success >= 92%, average
-    #   collisions <= 1.5, average steps / BFS <= 1.35
-    # escape mode is design freedom (spec 4): wall-following idea
-    # open points to settle while building:
-    #   - whether turns count into "steps" (calibrate vs the 1.35 ratio)
-    #   - escape rule: left-hand wall follow + timeout hand switch
-    #   - visited_count definition (start cell included?)
-    # note: this loop is Q3 + Q4 only; Q5 decide() is not part of it
-    pass
+    """Run the patrol loop (sense -> decide -> act) until done.
+
+    Returns the fixed stats contract: steps, collisions, visited_count,
+    found_enemy and success. Greedy dead-ends are escaped with a
+    wall-following mode plus a timeout hand switch.
+    """
+    enemy = grid.enemy_pos
+    left_of = {Facing.UP: Facing.LEFT, Facing.LEFT: Facing.DOWN,
+               Facing.DOWN: Facing.RIGHT, Facing.RIGHT: Facing.UP}
+    right_of = {value: key for key, value in left_of.items()}
+    turn_order = {Facing.UP: 0, Facing.RIGHT: 1,
+                  Facing.DOWN: 2, Facing.LEFT: 3}
+
+    def manhattan(cell):
+        return abs(cell[0] - enemy[0]) + abs(cell[1] - enemy[1])
+
+    def ahead(facing):
+        dx, dy = facing.delta
+        pos = grid.current_pos
+        return (pos[0] + dx, pos[1] + dy)
+
+    def has_candidate():
+        distance = manhattan(grid.current_pos)
+        for facing in (Facing.UP, Facing.DOWN, Facing.LEFT, Facing.RIGHT):
+            nxt = ahead(facing)
+            if not grid.is_blocked(nxt[0], nxt[1]):
+                if manhattan(nxt) < distance:
+                    return True
+        return False
+
+    steps = 0
+    visited = {grid.current_pos}
+    wall = False            # wall-following escape mode
+    hand = "L"
+    wall_steps = 0
+    entry_dist = 0
+    limit = grid.width + grid.height
+    while steps < max_steps and grid.fuel > 0 and not grid.found_enemy:
+        if not wall and not has_candidate():
+            wall = True
+            hand = "L"
+            wall_steps = 0
+            entry_dist = manhattan(grid.current_pos)
+        if wall:
+            if hand == "L":
+                side = left_of[grid.facing]
+                opposite = right_of[grid.facing]
+            else:
+                side = right_of[grid.facing]
+                opposite = left_of[grid.facing]
+            if not grid.is_blocked(*ahead(side)):
+                if hand == "L":
+                    grid.turn_left()
+                else:
+                    grid.turn_right()
+            elif grid.is_blocked(*ahead(grid.facing)):
+                if not grid.is_blocked(*ahead(opposite)):
+                    if hand == "L":
+                        grid.turn_right()
+                    else:
+                        grid.turn_left()
+                else:
+                    grid.turn_right()
+                    grid.turn_right()
+        else:
+            target = next_step_toward(grid.current_pos, enemy,
+                                      grid.obstacles, grid.facing)
+            quarter_turns = (turn_order[target]
+                             - turn_order[grid.facing]) % 4
+            if quarter_turns == 3:
+                grid.turn_left()
+            else:
+                for _ in range(quarter_turns):
+                    grid.turn_right()
+        grid.move_forward()
+        steps += 1
+        visited.add(grid.current_pos)
+        if wall:
+            wall_steps += 1
+            if wall_steps > limit and hand == "L":
+                hand = "R"
+                wall_steps = 0
+            elif wall_steps > 2 * limit:
+                wall = False
+            elif has_candidate():
+                if manhattan(grid.current_pos) < entry_dist + 1:
+                    wall = False
+    visited.add(grid.current_pos)
+    found = grid.found_enemy
+    return {"steps": steps,
+            "collisions": grid.collision_count,
+            "visited_count": len(visited),
+            "found_enemy": found,
+            "success": found}
 
 
 def report_to_json(stats):
-    """TODO(Q6)：把 stats 序列化为确定性的 JSON 字符串，见题面 Q6 规范。"""
-    # deterministic serialization: pick one set of json.dumps parameters
-    # (e.g. sort_keys=True, separators=(",", ":")) and keep them stable
-    # hidden tests accept any deterministic choice
-    pass
+    """Serialize the stats dict deterministically (sorted, compact)."""
+    return json.dumps(stats, sort_keys=True, separators=(",", ":"))
 
 
 # ---------------------------------------------------------------------------
