@@ -107,7 +107,7 @@ def analyze_damage_log(lines):
             figures["total"] += damage
             hits += 1
         else:
-            for segment in s.split(","): #传感器部分，脏行抛弃并收集数据
+            for segment in s.split(","):  # 传感器部分，脏行抛弃并收集数据
                 key, sep, value = segment.partition(":")
                 if sep != ":":
                     continue
@@ -124,7 +124,7 @@ def analyze_damage_log(lines):
                 figures["total"] += damage
                 hits += 1
     if hits:
-        figures["avg"] = round(figures["total"] / hits, 2) #数据的汇总
+        figures["avg"] = round(figures["total"] / hits, 2)  # 数据的汇总
         # ties keep the earliest in fixed order: front, left, right
         most_hit = "front"
         for side in ("left", "right"):
@@ -386,12 +386,33 @@ def decide(sensor, state, hp, heat):
 def run_patrol(grid, max_steps=500):
     """TODO(Q6)：sense → decide → act 主循环；
     循环结构、终止条件、脱困自由度与统计返回契约见题面 Q6 规范。"""
-    raise NotImplementedError("Q6 run_patrol：题面 Q6·主循环与统计契约")
+    # loop while steps < max_steps, grid.fuel > 0 and not grid.found_enemy
+    #   sense: read grid state (pos / facing / fuel / visited trail)
+    #   decide: Q4 greedy via next_step_toward; when greedy stalls
+    #     (no candidate), switch into a custom escape mode
+    #   act: turn the facing toward the chosen direction, then
+    #     move_forward; count the action into steps
+    # stats to track: steps, grid.collision_count, distinct visited
+    #   cells, found_enemy
+    # return {"steps": int, "collisions": int, "visited_count": int,
+    #         "found_enemy": bool, "success": bool}
+    # acceptance thresholds (200 seeds): success >= 92%, average
+    #   collisions <= 1.5, average steps / BFS <= 1.35
+    # escape mode is design freedom (spec 4): wall-following idea
+    # open points to settle while building:
+    #   - whether turns count into "steps" (calibrate vs the 1.35 ratio)
+    #   - escape rule: left-hand wall follow + timeout hand switch
+    #   - visited_count definition (start cell included?)
+    # note: this loop is Q3 + Q4 only; Q5 decide() is not part of it
+    pass
 
 
 def report_to_json(stats):
     """TODO(Q6)：把 stats 序列化为确定性的 JSON 字符串，见题面 Q6 规范。"""
-    raise NotImplementedError("Q6 report_to_json：题面 Q6·报告序列化")
+    # deterministic serialization: pick one set of json.dumps parameters
+    # (e.g. sort_keys=True, separators=(",", ":")) and keep them stable
+    # hidden tests accept any deterministic choice
+    pass
 
 
 # ---------------------------------------------------------------------------
