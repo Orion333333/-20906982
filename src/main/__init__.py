@@ -51,7 +51,7 @@ def status_report(name, robot_type, hp, max_hp, battery):
         status = "OK"
     elif battery >= 30:
         status = "WARNING"
-6666666666666666666666666666666666666666666    else:
+    else:
         status = "LOW"
     report = f"{name:<10}|{robot_type:^10}|HP {hp_percent:>3}%|BAT {battery:>3}%|{status}"
     return report
