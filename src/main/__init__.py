@@ -56,65 +56,82 @@ def status_report(name, robot_type, hp, max_hp, battery):
     return report
 
 
-
 # ---------------------------------------------------------------------------
 # Q2 战斗日志分析（题面 Q2·多源日志解析与统计）
 # ---------------------------------------------------------------------------
 def analyze_damage_log(lines):
-    """TODO(Q2)：解析混合格式伤害日志，返回固定契约的统计 dict；
-    行格式、去重与统计口径见题面 Q2 规范。"""
-    import json
-    
-    figures = {"total": 0, "by_armor":{"front": 0, "left": 0, "right": 0}, "most_hit": None, "avg": 0.0}
-    
-    #不要轻易相信AI的解答
-    
-    for line in lines:#先遍历，导流向传感器与json
+    """Parse mixed-format damage logs into the fixed stats contract.
+
+    Line formats, id deduplication and averaging rules follow the
+    coursework spec (Q2).
+    """
+    armor_of = {"F": "front", "L": "left", "R": "right"}
+    figures = {"total": 0,
+               "by_armor": {"front": 0, "left": 0, "right": 0},
+               "most_hit": None,
+               "avg": 0.0}
+    seen_ids = set()
+    hits = 0
+    for line in lines:
         if not isinstance(line, str):
             continue
         s = line.strip()
-        if not s:
+        if not s or s.startswith("#"):
             continue
-        if s.startswith("#"):
-            continue
-        if s.startswith("{"):#json
-        
+        if s.startswith("{"):
             try:
-                j = json.loads(s)
+                record = json.loads(s)
             except json.JSONDecodeError:
-                    continue
-            if not isinstance(j, dict):
-                    continue
-            armor = j.get("armor")
-            damage = j.get("damage")
-            if damage is not type(damage, int):#理论上来讲应该用type,但不知道为什么一直被提示用isinstance，最后先用提示
-                    continue#这里得再看一下，type和isinstance的区别，不知道为什么有不被可以TAP的AI要求修改了
-            
-        
-        
-        else:#传感器
-            
-            pending = s.split()
-            for seg in s.split(","):
-                k, sep, v = seg.partition(":")
-                if sep != ":":
+                continue
+            if not isinstance(record, dict):
+                continue
+            armor = record.get("armor")
+            damage = record.get("damage")
+            if armor not in ("front", "left", "right"):
+                continue
+            if not isinstance(damage, int) or isinstance(damage, bool):
+                continue
+            if damage <= 0:
+                continue
+            # validate fields first, then consume the id
+            # (a dirty line never marks its id as seen)
+            if "id" in record:
+                ident = record.get("id")
+                try:
+                    if ident in seen_ids:
                         continue
-                k = k.strip()
-                v = v.strip()
-                if not v.isdigit():
+                    seen_ids.add(ident)
+                except TypeError:
                     continue
-                n = int(v)
-                for armor in pending.append((float,n)):
-                    total += n
-                    figures["by_armor"][armor] += n
-                    count += 1
-
-                
-
-
-
-
-            
+            figures["by_armor"][armor] += damage
+            figures["total"] += damage
+            hits += 1
+        else:
+            for segment in s.split(","):
+                key, sep, value = segment.partition(":")
+                if sep != ":":
+                    continue
+                key = key.strip()
+                value = value.strip()
+                if key not in armor_of:
+                    continue
+                if not value.isdigit():
+                    continue
+                damage = int(value)
+                if damage <= 0:
+                    continue
+                figures["by_armor"][armor_of[key]] += damage
+                figures["total"] += damage
+                hits += 1
+    if hits:
+        figures["avg"] = round(figures["total"] / hits, 2)
+        # ties keep the earliest in fixed order: front, left, right
+        most_hit = "front"
+        for side in ("left", "right"):
+            if figures["by_armor"][side] > figures["by_armor"][most_hit]:
+                most_hit = side
+        figures["most_hit"] = most_hit
+    return figures
 
 
 # ---------------------------------------------------------------------------
