@@ -384,11 +384,16 @@ def decide(sensor, state, hp, heat):
 # Q6 巡逻任务（题面 Q6·巡逻契约与验收阈值）
 # ---------------------------------------------------------------------------
 def run_patrol(grid, max_steps=500):
-    """Run the patrol loop (sense -> decide -> act) until done.
+    """Run greedy navigation with bounded wall-following escape attempts.
 
-    Returns the fixed stats contract: steps, collisions, visited_count,
-    found_enemy and success. Greedy dead-ends are escaped with a
-    wall-following mode plus a timeout hand switch.
+    Each step counts one forward attempt after aligning the heading.
+    Visited cells include the initial cell and do not count repeats.
+    Stop at the target, max_steps, or the grid's existing fuel limit.
+
+    When no greedy move can reduce distance, follow a wall and switch
+    hands after a timeout. Resume greedy navigation once a decreasing
+    move is available at least as close to the target as the entry cell.
+    This strategy may revisit cells; max_steps bounds unsuccessful runs.
     """
     enemy = grid.enemy_pos
     left_of = {Facing.UP: Facing.LEFT, Facing.LEFT: Facing.DOWN,
@@ -420,9 +425,11 @@ def run_patrol(grid, max_steps=500):
     hand = "L"
     wall_steps = 0
     entry_dist = 0
+    # Bound a left-hand escape attempt before trying the other hand.
     limit = grid.width + grid.height
     while steps < max_steps and grid.fuel > 0 and not grid.found_enemy:
         if not wall and not has_candidate():
+            # No unblocked neighbor can strictly decrease the distance.
             wall = True
             hand = "L"
             wall_steps = 0
@@ -459,14 +466,17 @@ def run_patrol(grid, max_steps=500):
                 for _ in range(quarter_turns):
                     grid.turn_right()
         grid.move_forward()
+        # Heading changes belong to the same navigation step.
         steps += 1
         visited.add(grid.current_pos)
         if wall:
             wall_steps += 1
             if wall_steps > limit and hand == "L":
+                # Retry the boundary using the opposite hand.
                 hand = "R"
                 wall_steps = 0
             elif wall_steps > 2 * limit:
+                # Reassess greedy progress after a bounded escape attempt.
                 wall = False
             elif has_candidate():
                 if manhattan(grid.current_pos) < entry_dist + 1:
@@ -481,7 +491,11 @@ def run_patrol(grid, max_steps=500):
 
 
 def report_to_json(stats):
-    """Serialize the stats dict deterministically (sorted, compact)."""
+    """Serialize stats with sorted keys and compact separators.
+
+    Key sorting removes dependence on dictionary insertion order.
+    Serialization leaves the input dictionary unchanged.
+    """
     return json.dumps(stats, sort_keys=True, separators=(",", ":"))
 
 
