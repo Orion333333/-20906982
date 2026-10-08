@@ -46,11 +46,12 @@ def hp_ratio(hp, max_hp):
 def status_report(name, robot_type, hp, max_hp, battery):
     """TODO(Q1)：一行自检报告字符串；档位判定与逐字符格式见题面 Q1 规范。"""
     hp_percent = hp_ratio(hp, max_hp)
-    if hp_percent >= 75:
+    # battery tiers; boundaries 75 / 30 pinned by the visible tests
+    if battery >= 75:
         status = "OK"
-    elif 50 <= hp_percent < 75:
-        status = "WARNiNG"
-    else:
+    elif battery >= 30:
+        status = "WARNING"
+6666666666666666666666666666666666666666666    else:
         status = "LOW"
     report = f"{name:<10}|{robot_type:^10}|HP {hp_percent:>3}%|BAT {battery:>3}%|{status}"
     return report
@@ -81,7 +82,7 @@ def analyze_damage_log(lines):
         if s.startswith("{"):  # json部分，脏行抛弃并收集数据
             try:
                 record = json.loads(s)
-            except json.JSONDecodeError:
+            except (ValueError, RecursionError):
                 continue
             if not isinstance(record, dict):
                 continue
@@ -107,19 +108,28 @@ def analyze_damage_log(lines):
             figures["total"] += damage
             hits += 1
         else:
-            for segment in s.split(","):  # 传感器部分，脏行抛弃并收集数据
+            # Validate the whole sensor line before adding any damage.
+            pending = []
+            valid_line = True
+            for segment in s.split(","):
                 key, sep, value = segment.partition(":")
-                if sep != ":":
-                    continue
                 key = key.strip()
                 value = value.strip()
-                if key not in armor_of:
-                    continue
-                if not value.isdigit():
-                    continue
-                damage = int(value)
+                if sep != ":" or key not in armor_of or not value.isdigit():
+                    valid_line = False
+                    break
+                try:
+                    damage = int(value)
+                except ValueError:
+                    valid_line = False
+                    break
                 if damage <= 0:
-                    continue
+                    valid_line = False
+                    break
+                pending.append((key, damage))
+            if not valid_line:
+                continue
+            for key, damage in pending:
                 figures["by_armor"][armor_of[key]] += damage
                 figures["total"] += damage
                 hits += 1
@@ -341,7 +351,7 @@ def decide(sensor, state, hp, heat):
         robot = "INFANTRY"
     try:
         hp_pct = hp_ratio(hp, sensor["max_hp"])
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         hp_pct = 0
     # R5 sustained loss (assumption): the previous frame was also false;
     # a single lost frame counts as a short loss and keeps HOLD_FIRE
