@@ -343,10 +343,12 @@ def decide(sensor, state, hp, heat):
         hp_pct = hp_ratio(hp, sensor["max_hp"])
     except (TypeError, ValueError):
         hp_pct = 0
-    # sustained loss: the previous frame was also false (R5)
+    # R5 sustained loss (assumption): the previous frame was also false;
+    # a single lost frame counts as a short loss and keeps HOLD_FIRE
     recent_loss = len(frames) >= 2 and not bool(frames[-2])
+    # heat is not referenced by R1-R7; the parameter is kept for interface
 
-    if hp_pct <= 30:              # R1: survival first, overrides all
+    if hp_pct <= 30:              # R1: survival first (boundary: 30 included)
         return ("RETREAT", SentryState.RETREAT)
     if state is SentryState.RETREAT:  # R2: hold; exit at the recovery line
         if hp_pct >= 50:              # (recovery line assumption: 50)
@@ -356,6 +358,7 @@ def decide(sensor, state, hp, heat):
         return ("MOVE_BASE", SentryState.PATROL)
     if state is SentryState.ENGAGE:   # R4/R5: engaged behavior
         if visible:
+            # boundary: dist == 3 still shoots; unknown dist -> treat far
             if dist is not None and dist <= 3:
                 return ("SHOOT", SentryState.ENGAGE)
             if robot == "HERO":
