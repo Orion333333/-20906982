@@ -261,18 +261,44 @@ class SentryGrid:
 # Q4 贪心导航（题面 Q4·单步贪心导航策略）
 # ---------------------------------------------------------------------------
 def next_step_toward(pos, target, obstacles, current_facing=Facing.UP):
-    """TODO(Q4)：返回下一步应朝向的 Facing；
-    候选判定、优先级与回退规则见题面 Q4 规范。"""
-    # current distance = abs(dx) + abs(dy)
-    # x-axis candidate: RIGHT when dx > 0, LEFT when dx < 0
-    # y-axis candidate: UP when dy > 0, DOWN when dy < 0
-    # spec 1: a candidate needs (a) its neighbor not in obstacles and
-    #   (b) the resulting distance to the target to strictly shrink
-    # spec 2: with both axes offering a candidate, prefer the axis
-    #   with the larger absolute gap; equal gaps = open tie-break
-    # spec 3: no candidate (including pos == target) -> current_facing
-    # spec 4: no map-bounds logic here; move_forward owns that check
-    pass
+    """Pick the next facing toward the target (greedy, spec Q4).
+
+    Candidates must strictly shrink the Manhattan distance and avoid
+    obstacles; with both axes qualified the larger coordinate gap wins.
+    Falls back to current_facing when no candidate exists.
+    """
+    dx = target[0] - pos[0]
+    dy = target[1] - pos[1]
+
+    # the "toward" direction on each axis always shrinks the distance
+    # by exactly 1; a blocked toward-cell drops that axis candidate
+    x_step = None
+    if dx > 0:
+        x_step = Facing.RIGHT
+    elif dx < 0:
+        x_step = Facing.LEFT
+    if x_step is not None:
+        if (pos[0] + x_step.delta[0], pos[1] + x_step.delta[1]) in obstacles:
+            x_step = None
+
+    y_step = None
+    if dy > 0:
+        y_step = Facing.UP
+    elif dy < 0:
+        y_step = Facing.DOWN
+    if y_step is not None:
+        if (pos[0] + y_step.delta[0], pos[1] + y_step.delta[1]) in obstacles:
+            y_step = None
+
+    # spec 2: prefer the larger gap's axis; equal gaps keep the x axis
+    if x_step is not None and y_step is not None:
+        return x_step if abs(dx) >= abs(dy) else y_step
+    if x_step is not None:
+        return x_step
+    if y_step is not None:
+        return y_step
+    # spec 3: no candidate (including pos == target) -> stay as-is
+    return current_facing
 
 
 # ---------------------------------------------------------------------------
