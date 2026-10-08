@@ -263,7 +263,16 @@ class SentryGrid:
 def next_step_toward(pos, target, obstacles, current_facing=Facing.UP):
     """TODO(Q4)：返回下一步应朝向的 Facing；
     候选判定、优先级与回退规则见题面 Q4 规范。"""
-    raise NotImplementedError("Q4 next_step_toward：题面 Q4·贪心策略与回退")
+    # current distance = abs(dx) + abs(dy)
+    # x-axis candidate: RIGHT when dx > 0, LEFT when dx < 0
+    # y-axis candidate: UP when dy > 0, DOWN when dy < 0
+    # spec 1: a candidate needs (a) its neighbor not in obstacles and
+    #   (b) the resulting distance to the target to strictly shrink
+    # spec 2: with both axes offering a candidate, prefer the axis
+    #   with the larger absolute gap; equal gaps = open tie-break
+    # spec 3: no candidate (including pos == target) -> current_facing
+    # spec 4: no map-bounds logic here; move_forward owns that check
+    pass
 
 
 # ---------------------------------------------------------------------------
